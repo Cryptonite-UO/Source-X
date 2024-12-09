@@ -623,6 +623,7 @@ int CChar::CalcArmorDefense() const
 // RETURN: damage done
 //  -1		= already dead / invalid target.
 //  0		= no damage.
+//  3       = Dodge the hit
 //  INT32_MAX	= killed.
 int CChar::OnTakeDamage( int iDmg, CChar * pSrc, DAMAGE_TYPE uiType, int iDmgPhysical, int iDmgFire, int iDmgCold, int iDmgPoison, int iDmgEnergy, SPELL_TYPE spell)
 {
@@ -758,8 +759,15 @@ effect_bounce:
     CItem* pItemHit = nullptr;
 	if ( IsTrigUsed(TRIGGER_GETHIT) )
 	{
-		if ( OnTrigger( CTRIG_GetHit, pSrc, &Args ) == TRIGRET_RET_TRUE )
-			return 0;
+
+        switch (OnTrigger(CTRIG_GetHit, pSrc, &Args))
+        {
+        case TRIGRET_RET_TRUE:
+            return false;
+        case 3: //dodge
+            return 3;
+        }
+
 		iDmg = (int)(Args.m_iN1);
 		uiType = (DAMAGE_TYPE)(Args.m_iN2);
 
@@ -1251,7 +1259,7 @@ int CChar::Fight_CalcDamage( const CItem * pWeapon, bool bNoRandom, bool bGetMax
 				if ( !iStatBonus )
 					iStatBonus = STAT_STR;
 				if ( !iStatBonusPercent )
-					iStatBonusPercent = 10;
+					iStatBonusPercent = 1; //Original c'est 10
 				iDmgBonus += Stat_GetAdjusted(iStatBonus) * iStatBonusPercent / 100;
 				break;
 			}
@@ -1390,7 +1398,7 @@ bool CChar::Fight_Attack( CChar *pCharTarg, bool fToldByMaster )
 {
 	ADDTOCALLSTACK("CChar::Fight_Attack");
 
-	if ( !pCharTarg || pCharTarg == this || pCharTarg->IsStatFlag(STATF_DEAD|STATF_INVUL|STATF_STONE) || IsStatFlag(STATF_DEAD) )
+	if ( !pCharTarg || pCharTarg == this || pCharTarg->IsStatFlag(STATF_DEAD|STATF_INVUL|STATF_STONE) )
 	{
 		// Not a valid target.
 		Fight_Clear(pCharTarg, true);
@@ -1679,14 +1687,14 @@ WAR_SWING_TYPE CChar::Fight_CanHit(CChar * pCharSrc, bool fSwingNoRange)
 	//  WAR_SWING_SWINGING	= taking my swing now
 
 	// We can't hit them. Char deleted? Target deleted? Am I dead or stoned? or Is target Dead, stone, invul, insub or slept?
-	if (IsDisconnected() || pCharSrc->IsDisconnected() || IsStatFlag(STATF_DEAD | STATF_STONE) || (pCharSrc->IsStatFlag(STATF_DEAD | STATF_STONE | STATF_INVUL | STATF_INSUBSTANTIAL)) || (pCharSrc->IsSleeping()))
+	if (IsDisconnected() || pCharSrc->IsDisconnected() || IsStatFlag(STATF_DEAD | STATF_STONE) || (pCharSrc->IsStatFlag(STATF_DEAD | STATF_STONE | STATF_INVUL )) || (pCharSrc->IsSleeping())) //| STATF_INSUBSTANTIAL
 	{
 		return WAR_SWING_INVALID;
 	}
 	// We can't hit them right now. Because we can't see them or reach them (invis/hidden).
 	// Why the target is freeze we are change the attack type to swinging? Player can still attack paralyzed or sleeping characters.
 	// We make sure that the target is freeze or sleeping must wait ready for attack!
-	else if ( (pCharSrc->IsStatFlag(STATF_HIDDEN | STATF_INVISIBLE | STATF_SLEEPING)) || (IsStatFlag(STATF_FREEZE) && (!IsSetCombatFlags(COMBAT_PARALYZE_CANSWING))) || (IsStatFlag(STATF_SLEEPING)) ) // STATF_FREEZE | STATF_SLEEPING
+	else if ( (pCharSrc->IsStatFlag(STATF_HIDDEN | STATF_INVISIBLE | STATF_SLEEPING | STATF_INSUBSTANTIAL)) || (IsStatFlag(STATF_FREEZE) && (!IsSetCombatFlags(COMBAT_PARALYZE_CANSWING))) || (IsStatFlag(STATF_SLEEPING)) ) // STATF_FREEZE | STATF_SLEEPING
 	{
 		return WAR_SWING_SWINGING;
 	}
@@ -1741,6 +1749,7 @@ WAR_SWING_TYPE CChar::Fight_CanHit(CChar * pCharSrc, bool fSwingNoRange)
 WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 {
 	ADDTOCALLSTACK("CChar::Fight_Hit");
+    bool fMakeSound = true;
 
 	if ( !pCharTarg || (pCharTarg == this) )
 		return WAR_SWING_INVALID;
@@ -1783,7 +1792,7 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 				const CCPropsChar* pCCPChar = GetComponentProps<CCPropsChar>();
 				const CCPropsChar* pBaseCCPChar = Base_GetDef()->GetComponentProps<CCPropsChar>();
 
-                pCharTarg->OnTakeDamage(
+                if (pCharTarg->OnTakeDamage(
                     Fight_CalcDamage(m_uidWeapon.ItemFind()),
                     this,
                     iDmgType,
@@ -1792,8 +1801,10 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
                     (int)GetPropNum(pCCPChar, PROPCH_DAMCOLD,     pBaseCCPChar),
                     (int)GetPropNum(pCCPChar, PROPCH_DAMPOISON,   pBaseCCPChar),
                     (int)GetPropNum(pCCPChar, PROPCH_DAMENERGY,   pBaseCCPChar)
-                );
-
+                ) == 3) //If == 3 that mean target dodge the hit
+                {
+                    fMakeSound=false;
+                }
                 return WAR_SWING_EQUIPPING;
             }
         }
@@ -2055,7 +2066,7 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 				iSound = sm_Snd_Miss[(size_t)g_Rand.Get16ValFast(ARRAY_COUNT(sm_Snd_Miss))];
 			}
 		}
-		Sound(iSound);
+		Sound(iSound); //Sound when missing
 
 		return WAR_SWING_EQUIPPING_NOWAIT;
 	}
@@ -2202,9 +2213,6 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 			pAmmo->ConsumeAmount(1);
 	}
 
-	// Hit noise (based on weapon type)
-	SoundChar(CRESND_HIT);
-
 	if ( pWeapon )
 	{
 		// Check if the weapon is poisoned
@@ -2240,7 +2248,7 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 	// Took my swing. Do Damage !
 	const CCPropsChar* pCCPChar = GetComponentProps<CCPropsChar>();
 	const CCPropsChar* pBaseCCPChar = Base_GetDef()->GetComponentProps<CCPropsChar>();
-	pCharTarg->OnTakeDamage(
+    if (pCharTarg->OnTakeDamage(
         iDmg,
         this,
         iDmgType,
@@ -2249,7 +2257,16 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
         (int)GetPropNum(pCCPChar, PROPCH_DAMCOLD,     pBaseCCPChar),
         (int)GetPropNum(pCCPChar, PROPCH_DAMPOISON,   pBaseCCPChar),
         (int)GetPropNum(pCCPChar, PROPCH_DAMENERGY,   pBaseCCPChar)
-    );
+    ) == 3) //If == 3 that mean target dodge the hit
+    {
+        fMakeSound = false;
+    }
+
+    // Hit noise (based on weapon type)
+    if (fMakeSound)
+    {
+        SoundChar(CRESND_HIT); //Sound when we hit
+    }
 
 	if ( iDmg > 0 )
 	{
@@ -2372,11 +2389,11 @@ WAR_SWING_TYPE CChar::Fight_Hit( CChar * pCharTarg )
 		}
 
 		// Check for passive skill gain
-		if ( m_pPlayer &&  (!pCharTarg->m_pArea->IsFlag(REGION_FLAG_NO_PVP) || !pCharTarg->IsPlayer()) )
-		{
-			Skill_Experience(skill, m_Act_Difficulty);
-			Skill_Experience(SKILL_TACTICS, m_Act_Difficulty);
-		}
+		//if ( m_pPlayer &&  (!pCharTarg->m_pArea->IsFlag(REGION_FLAG_NO_PVP) || !pCharTarg->IsPlayer()) )
+		//{
+		//	Skill_Experience(skill, m_Act_Difficulty);
+		//	Skill_Experience(SKILL_TACTICS, m_Act_Difficulty);
+		//}
 	}
 
 	return WAR_SWING_EQUIPPING_NOWAIT;

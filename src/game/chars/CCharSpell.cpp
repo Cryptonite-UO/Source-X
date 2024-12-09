@@ -1152,6 +1152,8 @@ void CChar::Spell_Effect_Add( CItem * pSpell )
 					SetName(pCharDef->IsFemale() ? "#NAMES_ELF_FEMALE" : "#NAMES_ELF_MALE");
 				else if (IsGargoyle())
 					SetName(pCharDef->IsFemale() ? "#NAMES_GARGOYLE_FEMALE" : "#NAMES_GARGOYLE_MALE");
+				else if (IsVampire())
+					SetName(pCharDef->IsFemale() ? "#NAMES_HUMANFEMALE" : "#NAMES_HUMANMALE");
 
 				if (IsPlayableCharacter())
 					SetHue((HUE_TYPE)(g_Rand.GetVal2(HUE_SKIN_LOW, HUE_SKIN_HIGH)) | HUE_UNDERWEAR);
@@ -2564,9 +2566,9 @@ CChar * CChar::Spell_Summon_Try(SPELL_TYPE spell, CPointMap ptTarg, CREID_TYPE u
 		case SPELL_Water_Elem:
 			m_atMagery.m_uiSummonID = CREID_WATER_ELEM;
 			break;
-		case SPELL_Vengeful_Spirit:
-			m_atMagery.m_uiSummonID = CREID_REVENANT;
-			break;
+		//case SPELL_Vengeful_Spirit:  Retiré pour custom Vampire
+		//	m_atMagery.m_uiSummonID = CREID_REVENANT;
+		//	break;
 		case SPELL_Rising_Colossus:
 			m_atMagery.m_uiSummonID = CREID_RISING_COLOSSUS;
 			break;
@@ -4035,6 +4037,8 @@ bool CChar::OnSpellEffect( SPELL_TYPE spell, CChar * pCharSrc, int iSkillLevel, 
 					SetID( pCharDef->IsFemale() ? CREID_ELFMAN : CREID_ELFWOMAN );
 				else if ( IsGargoyle() )
 					SetID( pCharDef->IsFemale() ? CREID_GARGMAN : CREID_GARGWOMAN );
+				else if (IsVampire())
+					SetID(pCharDef->IsFemale() ? CREID_VAMPMAN : CREID_VAMPWOMAN);
 				_iPrev_id = GetID();
 			}
 			break;

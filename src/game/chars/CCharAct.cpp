@@ -2419,8 +2419,9 @@ bool CChar::UpdateAnimate(ANIM_TYPE action, bool fTranslate, bool fBackward , by
 		CNetState* state = pClient->GetNetState();
 		if (state->isClientEnhanced() || state->isClientKR())
 			cmdnew->send(pClient);
+		/*
 		else if (IsGargoyle() && state->isClientVersionNumber(MINCLIVER_NEWMOBILEANIM))
-			cmdnew->send(pClient);
+			cmdnew->send(pClient);*/
 		else
 			cmd->send(pClient);
 	}
@@ -4437,6 +4438,10 @@ CChar::DeathRequestResult CChar::Death()
 			case CREID_ELFMAN:
 			case CREID_ELFWOMAN:
 				pszGhostName = ( fFemale ? "c_elf_ghost_woman" : "c_elf_ghost_man" );
+				break;
+			case CREID_VAMPMAN:
+			case CREID_VAMPWOMAN:
+				pszGhostName = ( fFemale ? "c_vamp_ghost_woman" : "c_vamp_ghost_man" );
 				break;
 			default:
 				pszGhostName = ( fFemale ? "c_ghost_woman" : "c_ghost_man" );

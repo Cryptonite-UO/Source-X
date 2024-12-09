@@ -1215,7 +1215,7 @@ void CClient::Event_VendorBuy(CChar* pVendor, const VendorItem* items, uint uiIt
             }
             case IT_BEARD:
             {
-                if ((m_pChar->GetDispID() != CREID_MAN) && (m_pChar->GetDispID() != CREID_GARGMAN) && !m_pChar->IsPriv(PRIV_GM))
+                if ((m_pChar->GetDispID() != CREID_MAN) && (m_pChar->GetDispID() != CREID_GARGMAN) && (m_pChar->GetDispID() != CREID_VAMPMAN) && !m_pChar->IsPriv(PRIV_GM))
                 {
                     pVendor->Speak(g_Cfg.GetDefaultMsg(DEFMSG_NPC_VENDOR_CANTBUY));
                     return;
@@ -2629,11 +2629,11 @@ void CClient::Event_AOSPopupMenuRequest( dword uid ) //construct packet after a 
 					m_pPopupPacket->addOption( (word)(POPUP_TRAINSKILL + i), 6000 + i, wFlag, 0xFFFF);
 				}
 
-				if (pChar->m_pNPC->m_Brain == NPCBRAIN_STABLE)
-				{
-					m_pPopupPacket->addOption(POPUP_STABLESTABLE, 6126, POPUPFLAG_COLOR, 0xFFFF);
-					m_pPopupPacket->addOption(POPUP_STABLERETRIEVE, 6127, POPUPFLAG_COLOR, 0xFFFF);
-				}
+				//if (pChar->m_pNPC->m_Brain == NPCBRAIN_STABLE)
+				//{
+				//	m_pPopupPacket->addOption(POPUP_STABLESTABLE, 6126, POPUPFLAG_COLOR, 0xFFFF);
+				//	m_pPopupPacket->addOption(POPUP_STABLERETRIEVE, 6127, POPUPFLAG_COLOR, 0xFFFF);
+				//}
 			}
 			else
 			{

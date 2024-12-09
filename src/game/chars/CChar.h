@@ -393,6 +393,7 @@ public:		void  StatFlag_Mod(uint64 uiStatFlag, bool fMod) noexcept;
 	bool IsHuman() const;
 	bool IsElf() const;
 	bool IsGargoyle() const;
+	bool IsVampire() const;
 
 	int GetStatPercent(STAT_TYPE i) const;
 	lpctstr GetTradeTitle() const; // Paperdoll title for character p (2)
